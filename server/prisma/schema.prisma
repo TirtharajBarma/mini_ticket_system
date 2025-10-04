@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user") // "user" or "admin"
+  createdAt DateTime @default(now())
+  tickets   Ticket[] @relation("UserTickets")
+  comments  Comment[]
+}
+
+model Ticket {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  priority    String    // "high", "medium", "low"
+  status      String    @default("open") // "open", "closed"
+  createdAt   DateTime  @default(now())
+  slaDeadline DateTime
+  userId      String
+  assignedTo  String?   // Admin user ID
+  user        User      @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  userId    String
+  ticketId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}

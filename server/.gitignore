@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# build output
+dist/
+build/
+.prisma/
+
+# database files
+*.db
+*.sqlite
+*.sqlite-journal
+
+# Prisma related
+prisma/migrations/
+!prisma/schema.prisma
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# editor and OS files
+.vscode/
+.idea/
+.DS_Store
+
+# coverage and caches
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# lock files (optional — if using a monorepo)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
