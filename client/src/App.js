@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import TicketDetail from './pages/TicketDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
+import CannedResponses from './pages/CannedResponses';
 import Navbar from './components/Navbar';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -50,6 +51,11 @@ const AppRoutes = () => {
         <Route path="/admin/users" element={
           <ProtectedRoute adminOnly>
             <UserManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/canned-responses" element={
+          <ProtectedRoute adminOnly>
+            <CannedResponses />
           </ProtectedRoute>
         } />
         <Route path="/tickets/:id" element={

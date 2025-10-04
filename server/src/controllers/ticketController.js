@@ -3,7 +3,7 @@ import { calculateSLADeadline, getSLAStatus } from '../utils/sla.js';
 
 export const createTicket = async (req, res) => {
   try {
-    const { title, description, priority } = req.body;
+    const { title, description, priority, category = 'general' } = req.body;
     const userId = req.user.userId;
 
     const slaDeadline = calculateSLADeadline(priority);
@@ -13,6 +13,7 @@ export const createTicket = async (req, res) => {
         title,
         description,
         priority,
+        category,
         slaDeadline,
         userId,
       },
@@ -104,7 +105,7 @@ export const getTicketById = async (req, res) => {
               select: { id: true, name: true, role: true }
             }
           },
-          orderBy: { createdAt: 'asc' }
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -192,6 +193,52 @@ export const deleteTicket = async (req, res) => {
     res.json({ message: 'Ticket deleted successfully' });
   } catch (error) {
     console.error('Delete ticket error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const rateTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating } = req.body;
+    const userId = req.user.userId;
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    // Get ticket
+    const ticket = await prisma.ticket.findUnique({
+      where: { id }
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    // Check if user owns the ticket
+    if (ticket.userId !== userId) {
+      return res.status(403).json({ error: 'You can only rate your own tickets' });
+    }
+
+    // Check if ticket is closed
+    if (ticket.status !== 'closed') {
+      return res.status(400).json({ error: 'You can only rate closed tickets' });
+    }
+
+    // Update ticket with rating
+    const updatedTicket = await prisma.ticket.update({
+      where: { id },
+      data: { rating: parseInt(rating) }
+    });
+
+    res.json({
+      message: 'Ticket rated successfully',
+      ticket: updatedTicket
+    });
+  } catch (error) {
+    console.error('Rate ticket error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

@@ -2,14 +2,21 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchTicketById, addComment, clearCurrentTicket } from '../store/ticketSlice';
+import api from '../services/api';
 
 const TicketDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [newComment, setNewComment] = useState('');
+  const [cannedResponses, setCannedResponses] = useState([]);
+  const [showCannedDropdown, setShowCannedDropdown] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
   
   const { currentTicket: ticket, loading } = useSelector((state) => state.tickets);
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (id) {
@@ -20,6 +27,39 @@ const TicketDetail = () => {
     };
   }, [dispatch, id]);
 
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      fetchCannedResponses();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (ticket && ticket.status === 'closed' && !ticket.rating && ticket.userId === user?.id) {
+      setShowRatingModal(true);
+    }
+  }, [ticket, user]);
+
+  // Auto-refresh ticket data every 10 seconds
+  useEffect(() => {
+    if (!id) return;
+    
+    const interval = setInterval(() => {
+      dispatch(fetchTicketById(id));
+      setLastRefresh(new Date());
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [id, dispatch]);
+
+  const fetchCannedResponses = async () => {
+    try {
+      const response = await api.get('/canned-responses');
+      setCannedResponses(response.data.responses);
+    } catch (error) {
+      console.error('Error fetching canned responses:', error);
+    }
+  };
+
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -27,8 +67,29 @@ const TicketDetail = () => {
     try {
       await dispatch(addComment({ ticketId: id, content: newComment })).unwrap();
       setNewComment('');
+      setShowCannedDropdown(false);
     } catch (error) {
       console.error('Error adding comment:', error);
+    }
+  };
+
+  const handleInsertCanned = (content) => {
+    setNewComment(content);
+    setShowCannedDropdown(false);
+  };
+
+  const handleSubmitRating = async () => {
+    if (selectedRating === 0) {
+      alert('Please select a rating');
+      return;
+    }
+    try {
+      await api.post(`/tickets/${id}/rate`, { rating: selectedRating });
+      setShowRatingModal(false);
+      dispatch(fetchTicketById(id));
+    } catch (error) {
+      console.error('Error rating ticket:', error);
+      alert('Failed to submit rating');
     }
   };
 
@@ -37,6 +98,19 @@ const TicketDetail = () => {
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'technical': return 'bg-purple-100 text-purple-800';
+      case 'billing': return 'bg-yellow-100 text-yellow-800';
+      case 'account': return 'bg-blue-100 text-blue-800';
+      case 'feature-request': return 'bg-indigo-100 text-indigo-800';
+      case 'bug-report': return 'bg-red-100 text-red-800';
+      case 'general': return 'bg-gray-100 text-gray-800';
+      case 'other': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -75,6 +149,46 @@ const TicketDetail = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-6 px-4">
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Rate Your Experience</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              How satisfied are you with the resolution of this ticket?
+            </p>
+            
+            <div className="flex justify-center space-x-2 mb-6">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setSelectedRating(star)}
+                  className="text-4xl focus:outline-none transition-colors"
+                >
+                  {star <= selectedRating ? '⭐' : '☆'}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowRatingModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleSubmitRating}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Submit Rating
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={() => navigate('/dashboard')}
         className="text-blue-600 hover:text-blue-800 mb-4"
@@ -85,9 +199,12 @@ const TicketDetail = () => {
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <div className="flex justify-between items-start mb-4">
           <h1 className="text-2xl font-bold text-gray-900">{ticket.title}</h1>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 flex-wrap gap-y-1">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
               {ticket.priority} priority
+            </span>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(ticket.category)}`}>
+              {ticket.category?.replace('-', ' ') || 'general'}
             </span>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSLAColor(ticket.slaStatus)}`}>
               {ticket.slaStatus}
@@ -115,13 +232,29 @@ const TicketDetail = () => {
               </span>
             </div>
           )}
+          {ticket.rating && (
+            <div className="md:col-span-2">
+              <strong>Customer Rating:</strong>
+              <span className="ml-2">
+                {Array.from({ length: ticket.rating }).map((_, i) => (
+                  <span key={i} className="text-yellow-400">⭐</span>
+                ))}
+                <span className="ml-2 text-sm text-gray-600">({ticket.rating}/5)</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">
-          Comments ({ticket.comments?.length || 0})
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-medium text-gray-900">
+            Comments ({ticket.comments?.length || 0})
+          </h2>
+          <span className="text-xs text-gray-500">
+            🔄 Auto-refresh: {lastRefresh.toLocaleTimeString()}
+          </span>
+        </div>
         
         {ticket.status === 'closed' ? (
           <div className="mb-6 bg-gray-100 border border-gray-300 rounded-md p-4 text-center">
@@ -136,12 +269,40 @@ const TicketDetail = () => {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
-            <button
-              type="submit"
-              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-            >
-              Add Comment
-            </button>
+            <div className="mt-2 flex items-center space-x-3">
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+              >
+                Add Comment
+              </button>
+              {user?.role === 'admin' && cannedResponses.length > 0 && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowCannedDropdown(!showCannedDropdown)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md"
+                  >
+                    📋 Templates
+                  </button>
+                  {showCannedDropdown && (
+                    <div className="absolute left-0 mt-2 w-96 bg-white rounded-md shadow-lg z-10 max-h-96 overflow-y-auto border border-gray-200">
+                      {cannedResponses.map((response) => (
+                        <button
+                          key={response.id}
+                          type="button"
+                          onClick={() => handleInsertCanned(response.content)}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-100 border-b border-gray-100"
+                        >
+                          <div className="font-medium text-sm text-gray-900">{response.title}</div>
+                          <div className="text-xs text-gray-500 mt-1 truncate">{response.content}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </form>
         )}
 

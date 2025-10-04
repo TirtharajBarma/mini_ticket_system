@@ -34,7 +34,7 @@ export const addComment = async (req, res) => {
       },
       include: {
         user: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, role: true }
         }
       }
     });
@@ -72,10 +72,10 @@ export const getComments = async (req, res) => {
       where: { ticketId },
       include: {
         user: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, role: true }
         }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     res.json({ comments });

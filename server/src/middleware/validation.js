@@ -27,6 +27,7 @@ export const ticketSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   priority: z.enum(['high', 'medium', 'low']),
+  category: z.string().default('general'),
 });
 
 export const commentSchema = z.object({

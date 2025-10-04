@@ -24,12 +24,21 @@ model Ticket {
   description String
   priority    String    // "high", "medium", "low"
   status      String    @default("open") // "open", "closed"
+  category    String    @default("general") // "technical", "billing", "account", "general"
   createdAt   DateTime  @default(now())
   slaDeadline DateTime
   userId      String
   assignedTo  String?   // Admin user ID
+  rating      Int?      // 1-5 stars, null if not rated
   user        User      @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
   comments    Comment[]
+}
+
+model CannedResponse {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
 }
 
 model Comment {

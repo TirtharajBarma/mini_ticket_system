@@ -4,7 +4,8 @@ import {
   getTickets, 
   getTicketById, 
   updateTicket, 
-  deleteTicket 
+  deleteTicket,
+  rateTicket
 } from '../controllers/ticketController.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { validateRequest, ticketSchema } from '../middleware/validation.js';
@@ -19,5 +20,6 @@ router.get('/', getTickets);
 router.get('/:id', getTicketById);
 router.patch('/:id', requireAdmin, updateTicket);
 router.delete('/:id', requireAdmin, deleteTicket);
+router.post('/:id/rate', rateTicket);
 
 export default router;

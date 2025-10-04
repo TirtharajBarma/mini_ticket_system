@@ -32,6 +32,9 @@ const Navbar = () => {
                   <Link to="/admin/users" className="hover:bg-blue-700 px-3 py-2 rounded">
                     Users
                   </Link>
+                  <Link to="/admin/canned-responses" className="hover:bg-blue-700 px-3 py-2 rounded">
+                    Templates
+                  </Link>
                 </>
               )}
             </div>

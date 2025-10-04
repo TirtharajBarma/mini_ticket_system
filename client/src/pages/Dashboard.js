@@ -9,19 +9,27 @@ const Dashboard = () => {
   const [newTicket, setNewTicket] = useState({
     title: '',
     description: '',
-    priority: 'medium'
+    priority: 'medium',
+    category: 'general'
   });
   const { tickets, loading } = useSelector((state) => state.tickets);
 
   useEffect(() => {
     dispatch(fetchTickets());
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      dispatch(fetchTickets());
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [dispatch]);
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
     try {
       await dispatch(createTicket(newTicket)).unwrap();
-      setNewTicket({ title: '', description: '', priority: 'medium' });
+      setNewTicket({ title: '', description: '', priority: 'medium', category: 'general' });
       setShowCreateForm(false);
     } catch (error) {
       console.error('Error creating ticket:', error);
@@ -33,6 +41,19 @@ const Dashboard = () => {
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'technical': return 'bg-purple-100 text-purple-800';
+      case 'billing': return 'bg-yellow-100 text-yellow-800';
+      case 'account': return 'bg-blue-100 text-blue-800';
+      case 'feature-request': return 'bg-indigo-100 text-indigo-800';
+      case 'bug-report': return 'bg-red-100 text-red-800';
+      case 'general': return 'bg-gray-100 text-gray-800';
+      case 'other': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -99,6 +120,23 @@ const Dashboard = () => {
                   <option value="high">High</option>
                 </select>
               </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  value={newTicket.category}
+                  onChange={(e) => setNewTicket({...newTicket, category: e.target.value})}
+                >
+                  <option value="general">General</option>
+                  <option value="technical">Technical</option>
+                  <option value="billing">Billing</option>
+                  <option value="account">Account</option>
+                  <option value="feature-request">Feature Request</option>
+                  <option value="bug-report">Bug Report</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
               
               <div className="flex justify-end space-x-3">
                 <button
@@ -141,12 +179,12 @@ const Dashboard = () => {
                       <p className="text-sm text-gray-500 truncate">
                         {ticket.description}
                       </p>
-                      <div className="mt-2 flex items-center space-x-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ticket.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                          {ticket.status}
-                        </span>
+                      <div className="mt-2 flex items-center space-x-2 flex-wrap gap-y-1">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
                           {ticket.priority}
+                        </span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(ticket.category)}`}>
+                          {ticket.category?.replace('-', ' ') || 'general'}
                         </span>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSLAColor(ticket.slaStatus)}`}>
                           {ticket.slaStatus}
@@ -154,6 +192,13 @@ const Dashboard = () => {
                         <span className="text-xs text-gray-500">
                           {ticket._count?.comments || 0} comments
                         </span>
+                        {ticket.rating && (
+                          <span className="text-xs">
+                            {Array.from({ length: ticket.rating }).map((_, i) => (
+                              <span key={i} className="text-yellow-400">⭐</span>
+                            ))}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
