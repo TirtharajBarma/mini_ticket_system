@@ -10,6 +10,13 @@ const CannedResponses = () => {
 
   useEffect(() => {
     fetchResponses();
+    
+    // Auto-refresh every 5 seconds
+    const interval = setInterval(() => {
+      fetchResponses();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchResponses = async () => {

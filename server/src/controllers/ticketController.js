@@ -39,17 +39,31 @@ export const createTicket = async (req, res) => {
 
 export const getTickets = async (req, res) => {
   try {
-    const { status, priority } = req.query;
+    const { status, priority, category, search, sortBy, assignedTo, rating } = req.query;
     const userId = req.user.userId;
     const isAdmin = req.user.role === 'admin';
 
     const where = {
       ...(status && { status }),
       ...(priority && { priority }),
+      ...(category && { category }),
+      ...(assignedTo && { assignedTo }),
+      ...(rating && { rating: parseInt(rating) }),
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } }
+        ]
+      }),
       ...(!isAdmin && { userId }) // Non-admins only see their own tickets
     };
 
-    const tickets = await prisma.ticket.findMany({
+    // Determine sort order
+    let orderBy = { createdAt: 'desc' }; // default
+    if (sortBy === 'oldest') orderBy = { createdAt: 'asc' };
+    if (sortBy === 'sla') orderBy = { slaDeadline: 'asc' };
+
+    let tickets = await prisma.ticket.findMany({
       where,
       include: {
         user: {
@@ -59,26 +73,32 @@ export const getTickets = async (req, res) => {
           select: { comments: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy
     });
 
-    // Fetch assigned admin details for each ticket
-    const ticketsWithDetails = await Promise.all(
-      tickets.map(async (ticket) => {
-        let assignedAdmin = null;
-        if (ticket.assignedTo) {
-          assignedAdmin = await prisma.user.findUnique({
-            where: { id: ticket.assignedTo },
-            select: { id: true, name: true, email: true }
-          });
-        }
-        return {
-          ...ticket,
-          assignedAdmin,
-          slaStatus: getSLAStatus(ticket)
-        };
-      })
-    );
+    // Sort by priority if requested (high → medium → low)
+    if (sortBy === 'priority') {
+      const priorityOrder = { high: 1, medium: 2, low: 3 };
+      tickets = tickets.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+    }
+
+    // Get unique admin IDs and fetch them in one query
+    const adminIds = [...new Set(tickets.map(t => t.assignedTo).filter(Boolean))];
+    const admins = adminIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: adminIds } },
+          select: { id: true, name: true, email: true }
+        })
+      : [];
+    
+    const adminMap = Object.fromEntries(admins.map(a => [a.id, a]));
+
+    // Add admin and SLA status to tickets
+    const ticketsWithDetails = tickets.map(ticket => ({
+      ...ticket,
+      assignedAdmin: ticket.assignedTo ? adminMap[ticket.assignedTo] : null,
+      slaStatus: getSLAStatus(ticket)
+    }));
 
     res.json({ tickets: ticketsWithDetails });
   } catch (error) {
@@ -110,15 +130,6 @@ export const getTicketById = async (req, res) => {
       }
     });
 
-    // If ticket is assigned, get assigned admin details
-    let assignedAdmin = null;
-    if (ticket && ticket.assignedTo) {
-      assignedAdmin = await prisma.user.findUnique({
-        where: { id: ticket.assignedTo },
-        select: { id: true, name: true, email: true }
-      });
-    }
-
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
@@ -126,6 +137,15 @@ export const getTicketById = async (req, res) => {
     // Check if user can access this ticket
     if (!isAdmin && ticket.userId !== userId) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get assigned admin details if ticket is assigned
+    let assignedAdmin = null;
+    if (ticket.assignedTo) {
+      assignedAdmin = await prisma.user.findUnique({
+        where: { id: ticket.assignedTo },
+        select: { id: true, name: true, email: true }
+      });
     }
 
     res.json({
@@ -150,6 +170,12 @@ export const updateTicket = async (req, res) => {
     if (!isAdmin) {
       return res.status(403).json({ error: 'Only admins can update tickets' });
     }
+
+    // Get old ticket data before update
+    const oldTicket = await prisma.ticket.findUnique({
+      where: { id },
+      include: { user: true }
+    });
 
     const ticket = await prisma.ticket.update({
       where: { id },

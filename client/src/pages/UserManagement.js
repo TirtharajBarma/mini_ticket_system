@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import api from '../services/api';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user: currentUser } = useSelector((state) => state.auth);
 
   useEffect(() => {
     fetchUsers();
+    
+    // Auto-refresh every 5 seconds
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchUsers = async () => {
@@ -31,9 +40,23 @@ const UserManagement = () => {
 
     if (!window.confirm(confirmMessage)) return;
 
+    // Check if user is trying to change their own role
+    if (userId === currentUser?.id) {
+      alert('⚠️ You cannot change your own role! Ask another admin to do it.');
+      return;
+    }
+
     try {
       await api.patch(`/users/${userId}/role`, { role: newRole });
       await fetchUsers();
+      
+      // Show success message with logout instruction
+      const changedUser = users.find(u => u.id === userId);
+      if (changedUser && newRole === 'admin') {
+        alert(`✅ ${changedUser.name} has been promoted to admin!\n\n⚠️ Important: They need to LOGOUT and LOGIN again to see admin features.`);
+      } else if (changedUser) {
+        alert(`✅ ${changedUser.name} has been demoted to user.\n\n⚠️ Important: They need to LOGOUT and LOGIN again for changes to take effect.`);
+      }
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to update user role');
     }
@@ -156,12 +179,22 @@ const UserManagement = () => {
         )}
       </div>
 
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-900 mb-2">💡 Admin Secret Code</h3>
-        <p className="text-sm text-blue-700">
-          Share the admin secret code (<code className="bg-blue-100 px-2 py-1 rounded">ADMIN2025</code>) with users who need admin access during registration.
-          Alternatively, you can promote existing users to admin using the buttons above.
-        </p>
+      <div className="mt-6 space-y-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-blue-900 mb-2">💡 Admin Secret Code</h3>
+          <p className="text-sm text-blue-700">
+            Share the admin secret code (<code className="bg-blue-100 px-2 py-1 rounded">ADMIN2025</code>) with users who need admin access during registration.
+            Alternatively, you can promote existing users to admin using the buttons above.
+          </p>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-yellow-900 mb-2">⚠️ Important: Role Change Requires Re-login</h3>
+          <p className="text-sm text-yellow-700">
+            When you promote or demote a user, they must <strong>LOGOUT and LOGIN again</strong> to see the changes. 
+            Their session will not update automatically. Make sure to inform them!
+          </p>
+        </div>
       </div>
     </div>
   );

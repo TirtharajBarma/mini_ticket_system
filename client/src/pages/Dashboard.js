@@ -6,6 +6,14 @@ import { fetchTickets, createTicket } from '../store/ticketSlice';
 const Dashboard = () => {
   const dispatch = useDispatch();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({
+    status: '',
+    priority: '',
+    category: '',
+    sortBy: 'newest'
+  });
   const [newTicket, setNewTicket] = useState({
     title: '',
     description: '',
@@ -15,15 +23,31 @@ const Dashboard = () => {
   const { tickets, loading } = useSelector((state) => state.tickets);
 
   useEffect(() => {
-    dispatch(fetchTickets());
-    
-    // Auto-refresh every 30 seconds
+    const params = {};
+    if (searchQuery) params.search = searchQuery;
+    if (filters.status) params.status = filters.status;
+    if (filters.priority) params.priority = filters.priority;
+    if (filters.category) params.category = filters.category;
+    if (filters.sortBy && filters.sortBy !== 'newest') params.sortBy = filters.sortBy;
+
+    dispatch(fetchTickets(params));
+  }, [dispatch, searchQuery, filters]);
+
+  useEffect(() => {
+    // Auto-refresh every 5 seconds
     const interval = setInterval(() => {
-      dispatch(fetchTickets());
-    }, 30000);
+      const params = {};
+      if (searchQuery) params.search = searchQuery;
+      if (filters.status) params.status = filters.status;
+      if (filters.priority) params.priority = filters.priority;
+      if (filters.category) params.category = filters.category;
+      if (filters.sortBy && filters.sortBy !== 'newest') params.sortBy = filters.sortBy;
+
+      dispatch(fetchTickets(params));
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [dispatch]);
+  }, [dispatch, searchQuery, filters]);
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
@@ -35,6 +59,18 @@ const Dashboard = () => {
       console.error('Error creating ticket:', error);
     }
   };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setFilters({
+      status: '',
+      priority: '',
+      category: '',
+      sortBy: 'newest'
+    });
+  };
+
+  const activeFilterCount = Object.values(filters).filter(v => v && v !== 'newest').length + (searchQuery ? 1 : 0);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -79,6 +115,91 @@ const Dashboard = () => {
         >
           Create New Ticket
         </button>
+      </div>
+
+      {/* Search and Filter Bar */}
+      <div className="bg-white shadow rounded-lg p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="🔍 Search tickets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md flex items-center gap-2"
+          >
+            🎛️ Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+          </button>
+        </div>
+
+        {/* Filter Options */}
+        {showFilters && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({...filters, status: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">All Status</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+            </select>
+
+            <select
+              value={filters.priority}
+              onChange={(e) => setFilters({...filters, priority: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">All Priority</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+
+            <select
+              value={filters.category}
+              onChange={(e) => setFilters({...filters, category: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">All Categories</option>
+              <option value="general">General</option>
+              <option value="technical">Technical</option>
+              <option value="billing">Billing</option>
+              <option value="account">Account</option>
+              <option value="feature-request">Feature Request</option>
+              <option value="bug-report">Bug Report</option>
+              <option value="other">Other</option>
+            </select>
+
+            <select
+              value={filters.sortBy}
+              onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="priority">Priority</option>
+              <option value="sla">SLA Deadline</option>
+            </select>
+
+            {activeFilterCount > 0 && (
+              <button
+                onClick={handleClearFilters}
+                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
+              >
+                ✕ Clear All
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {showCreateForm && (

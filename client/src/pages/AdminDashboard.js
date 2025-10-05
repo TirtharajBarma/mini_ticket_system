@@ -18,11 +18,11 @@ const AdminDashboard = () => {
     dispatch(fetchTickets(filters));
     fetchAdminUsers();
     
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 5 seconds
     const interval = setInterval(() => {
       const filters = filter !== 'all' ? { status: filter } : {};
       dispatch(fetchTickets(filters));
-    }, 30000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [dispatch, filter]);

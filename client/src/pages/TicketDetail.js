@@ -39,14 +39,14 @@ const TicketDetail = () => {
     }
   }, [ticket, user]);
 
-  // Auto-refresh ticket data every 10 seconds
+  // Auto-refresh ticket data every 5 seconds
   useEffect(() => {
     if (!id) return;
     
     const interval = setInterval(() => {
       dispatch(fetchTicketById(id));
       setLastRefresh(new Date());
-    }, 10000); // Refresh every 10 seconds
+    }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval);
   }, [id, dispatch]);

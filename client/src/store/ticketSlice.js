@@ -64,7 +64,7 @@ const ticketSlice = createSlice({
       })
       .addCase(addComment.fulfilled, (state, action) => {
         if (state.currentTicket) {
-          state.currentTicket.comments.push(action.payload);
+          state.currentTicket.comments.unshift(action.payload);
         }
       });
   },
