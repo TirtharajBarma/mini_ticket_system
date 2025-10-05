@@ -22,7 +22,7 @@ const Analytics = () => {
       setAnalytics(response.data.analytics);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      // Error is already shown via the loading state
       setLoading(false);
     }
   };

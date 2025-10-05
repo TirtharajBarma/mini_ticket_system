@@ -8,6 +8,8 @@ const Dashboard = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [createError, setCreateError] = useState(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
@@ -51,12 +53,16 @@ const Dashboard = () => {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
+    setIsCreating(true);
+    setCreateError(null);
     try {
       await dispatch(createTicket(newTicket)).unwrap();
       setNewTicket({ title: '', description: '', priority: 'medium', category: 'general' });
       setShowCreateForm(false);
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      setCreateError(error.message || 'Failed to create ticket. Please try again.');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -206,6 +212,11 @@ const Dashboard = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <h2 className="text-xl font-bold mb-4">Create New Ticket</h2>
+            {createError && (
+              <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {createError}
+              </div>
+            )}
             <form onSubmit={handleCreateTicket}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
@@ -262,16 +273,31 @@ const Dashboard = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setCreateError(null);
+                  }}
+                  disabled={isCreating}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={isCreating}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Create Ticket
+                  {isCreating ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Ticket'
+                  )}
                 </button>
               </div>
             </form>

@@ -6,7 +6,12 @@ export const validateRequest = (schema) => {
       schema.parse(req.body);
       next();
     } catch (error) {
-      res.status(400).json({ error: 'Validation failed' });
+      // Extract detailed error messages from Zod
+      const errorMessages = error.errors?.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      res.status(400).json({ 
+        error: 'Validation failed',
+        details: errorMessages || error.message 
+      });
     }
   };
 };

@@ -25,8 +25,8 @@ const CannedResponses = () => {
       setResponses(response.data.responses);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching canned responses:', error);
       setLoading(false);
+      alert('Failed to load canned responses. Please refresh the page.');
     }
   };
 
@@ -43,8 +43,7 @@ const CannedResponses = () => {
       setShowCreateForm(false);
       fetchResponses();
     } catch (error) {
-      console.error('Error saving canned response:', error);
-      alert('Failed to save canned response');
+      alert('Failed to save canned response. Please try again.');
     }
   };
 
@@ -60,8 +59,7 @@ const CannedResponses = () => {
       await api.delete(`/canned-responses/${id}`);
       fetchResponses();
     } catch (error) {
-      console.error('Error deleting canned response:', error);
-      alert('Failed to delete canned response');
+      alert('Failed to delete canned response. Please try again.');
     }
   };
 

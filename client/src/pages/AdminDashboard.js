@@ -33,7 +33,7 @@ const AdminDashboard = () => {
       const admins = response.data.users.filter(user => user.role === 'admin');
       setAdminUsers(admins);
     } catch (error) {
-      console.error('Error fetching admin users:', error);
+      // Silently fail - admin users are optional for ticket viewing
     }
   };
 
@@ -41,7 +41,7 @@ const AdminDashboard = () => {
     try {
       await dispatch(updateTicket({ ticketId, updateData: { status } })).unwrap();
     } catch (error) {
-      console.error('Error updating ticket:', error);
+      alert('Failed to update ticket status. Please try again.');
     }
   };
 
@@ -66,8 +66,7 @@ const AdminDashboard = () => {
       setSelectedTicketId(null);
       setSelectedAdminId('');
     } catch (error) {
-      console.error('Error assigning ticket:', error);
-      alert('Failed to assign ticket');
+      alert('Failed to assign ticket. Please try again.');
     }
   };
 
@@ -77,7 +76,7 @@ const AdminDashboard = () => {
     try {
       await dispatch(deleteTicket(ticketId)).unwrap();
     } catch (error) {
-      console.error('Error deleting ticket:', error);
+      alert('Failed to delete ticket. Please try again.');
     }
   };
 

@@ -56,7 +56,7 @@ const TicketDetail = () => {
       const response = await api.get('/canned-responses');
       setCannedResponses(response.data.responses);
     } catch (error) {
-      console.error('Error fetching canned responses:', error);
+      // Silently fail - canned responses are optional
     }
   };
 
@@ -69,7 +69,7 @@ const TicketDetail = () => {
       setNewComment('');
       setShowCannedDropdown(false);
     } catch (error) {
-      console.error('Error adding comment:', error);
+      alert('Failed to add comment. Please try again.');
     }
   };
 
@@ -88,8 +88,7 @@ const TicketDetail = () => {
       setShowRatingModal(false);
       dispatch(fetchTicketById(id));
     } catch (error) {
-      console.error('Error rating ticket:', error);
-      alert('Failed to submit rating');
+      alert('Failed to submit rating. Please try again.');
     }
   };
 
