@@ -1,0 +1,123 @@
+# === Project Overview ===
+Project Name: HelpDesk Mini
+Description: A simple helpdesk system for creating tickets, tracking SLA deadlines, and allowing comments on tickets. 
+Stack: React (frontend, JSX), Node.js (backend, ES Modules), Prisma ORM with PostgreSQL.
+
+# === Tech Stack & Rules ===
+Frontend: 
+- React (JSX, not TSX)
+- React Router for navigation
+- Tailwind CSS for styling (keep it clean & minimal)
+- Axios for API calls
+
+Backend:
+- Node.js with ES Modules ("type": "module" in package.json)
+- Express.js for REST APIs
+- Prisma ORM for PostgreSQL database access
+- Nodemon for local dev
+- JWT-based authentication (users + admins)
+- Zod or Joi for input validation
+
+Database:
+- PostgreSQL
+- Prisma schema for User, Ticket, Comment, SLA tracking
+
+Dev Tools:
+- GitHub Codespaces / Vercel / Railway for hosting
+- ESLint + Prettier for code formatting
+- Dotenv for environment variables
+
+# === Features to Implement ===
+1. **User Authentication**
+   - Sign up, login
+   - JWT tokens
+   - Role: User, Admin
+
+2. **Ticket Management**
+   - User can create a ticket (title, description, priority)
+   - Tickets have SLA deadline (e.g., 24h for High, 48h for Medium, 72h for Low)
+   - Tickets can be assigned to Admins
+
+3. **Comments**
+   - Users and Admins can add comments to a ticket
+   - Comments linked to User + Ticket
+
+4. **SLA Tracking**
+   - Each ticket stores createdAt + SLA deadline
+   - Mark ticket as "Overdue" if past SLA
+
+5. **Admin Dashboard**
+   - List all tickets
+   - Filter tickets by SLA status (open, overdue, closed)
+
+6. **User Dashboard**
+   - View only their own tickets
+   - Add comments, see SLA countdown
+
+# === API Endpoints (REST) ===
+[Auth]
+POST /api/auth/register → register user
+POST /api/auth/login → login & get JWT
+
+[Ticket]
+POST /api/tickets → create ticket
+GET /api/tickets → get tickets (all if admin, own if user)
+GET /api/tickets/:id → get single ticket
+PATCH /api/tickets/:id → update ticket status/assign
+DELETE /api/tickets/:id → delete ticket (admin only)
+
+[Comments]
+POST /api/tickets/:id/comments → add comment
+GET /api/tickets/:id/comments → fetch comments
+
+# === Database Schema (Prisma) ===
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user") // "user" or "admin"
+  tickets   Ticket[]
+  comments  Comment[]
+}
+
+model Ticket {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  priority    String
+  status      String    @default("open") // "open", "closed"
+  createdAt   DateTime  @default(now())
+  slaDeadline DateTime
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  comments    Comment[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  userId    String
+  ticketId  String
+  user      User   @relation(fields: [userId], references: [id])
+  ticket    Ticket @relation(fields: [ticketId], references: [id])
+}
+
+# === Frontend Pages ===
+1. Auth Pages → Login, Register
+2. User Dashboard → List my tickets + Create new
+3. Ticket Detail → Show SLA countdown + comments
+4. Admin Dashboard → View all tickets + filter overdue
+
+# === Constraints ===
+- Use REST only (no GraphQL).
+- Use Prisma migrations for DB changes.
+- Keep code modular and production-ready.
+- Write clean, commented code.
+- No overengineering — stick to MVP features.
+
+# === Deployment ===
+- Frontend → Vercel or Netlify
+- Backend → Railway / Render
+- Database → Railway PostgreSQL
