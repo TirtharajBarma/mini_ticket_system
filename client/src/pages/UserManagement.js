@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import api from '../services/api';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -9,26 +10,26 @@ const UserManagement = () => {
   const { user: currentUser } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(false); // Initial load with loading state
     
-    // Auto-refresh every 5 seconds
+    // Auto-refresh every 5 seconds (silent updates)
     const interval = setInterval(() => {
-      fetchUsers();
+      fetchUsers(true); // Silent refresh
     }, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && users.length === 0) setLoading(true);
       const response = await api.get('/users');
       setUsers(response.data.users);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to fetch users');
+      if (!silent) setError(err.response?.data?.error || 'Failed to fetch users');
     } finally {
-      setLoading(false);
+      if (!silent && users.length === 0) setLoading(false);
     }
   };
 
@@ -79,7 +80,14 @@ const UserManagement = () => {
     return role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
   };
 
-  if (loading) return <div className="flex justify-center items-center h-64">Loading...</div>;
+  if (loading && users.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto py-6 px-4">
+        <div className="h-9 bg-gray-200 rounded w-64 mb-6 animate-pulse"></div>
+        <SkeletonLoader type="table" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4">

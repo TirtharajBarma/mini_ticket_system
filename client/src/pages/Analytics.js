@@ -1,37 +1,42 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const Analytics = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
     
     // Auto-refresh every 5 seconds
     const interval = setInterval(() => {
-      fetchAnalytics();
+      fetchAnalytics(true); // Silent refresh
     }, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
       const response = await api.get('/analytics');
       setAnalytics(response.data.analytics);
-      setLoading(false);
+      setError(false);
     } catch (error) {
-      // Error is already shown via the loading state
-      setLoading(false);
+      if (!silent) setError(true);
+    } finally {
+      if (!silent) setLoading(false);
     }
   };
 
-  if (loading) return <div className="flex justify-center items-center h-64">Loading analytics...</div>;
-  if (!analytics) return (
+  if (loading && !analytics) return <SkeletonLoader type="analytics" />;
+  
+  if (error && !analytics) return (
     <div className="text-center py-12">
       <p className="text-red-600">Failed to load analytics data</p>
-      <button onClick={fetchAnalytics} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">
+      <button onClick={() => fetchAnalytics()} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
         Retry
       </button>
     </div>

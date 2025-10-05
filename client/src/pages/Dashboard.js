@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchTickets, createTicket } from '../store/ticketSlice';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -306,7 +307,11 @@ const Dashboard = () => {
       )}
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {tickets.length === 0 ? (
+        {loading && tickets.length === 0 ? (
+          <div className="p-4">
+            <SkeletonLoader type="table" />
+          </div>
+        ) : tickets.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">No tickets found. Create your first ticket!</p>
           </div>

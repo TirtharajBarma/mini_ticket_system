@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchTicketById, addComment, clearCurrentTicket } from '../store/ticketSlice';
 import api from '../services/api';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const TicketDetail = () => {
   const { id } = useParams();
@@ -14,13 +15,14 @@ const TicketDetail = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [initialLoad, setInitialLoad] = useState(true);
   
   const { currentTicket: ticket, loading } = useSelector((state) => state.tickets);
   const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (id) {
-      dispatch(fetchTicketById(id));
+      dispatch(fetchTicketById(id)).finally(() => setInitialLoad(false));
     }
     return () => {
       dispatch(clearCurrentTicket());
@@ -143,7 +145,15 @@ const TicketDetail = () => {
     return `${hours}h ${minutes}m remaining`;
   };
 
-  if (loading) return <div className="flex justify-center items-center h-64">Loading...</div>;
+  // Show skeleton only on initial load, not on refreshes
+  if (initialLoad && loading && !ticket) {
+    return (
+      <div className="max-w-4xl mx-auto py-6 px-4">
+        <SkeletonLoader type="card" />
+      </div>
+    );
+  }
+  
   if (!ticket) return <div className="text-center py-12">Ticket not found</div>;
 
   return (

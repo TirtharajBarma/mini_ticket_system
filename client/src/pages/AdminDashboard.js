@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchTickets, updateTicket, deleteTicket } from '../store/ticketSlice';
 import api from '../services/api';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
@@ -14,18 +15,17 @@ const AdminDashboard = () => {
   const { tickets, loading } = useSelector((state) => state.tickets);
 
   useEffect(() => {
-    const filters = filter !== 'all' ? { status: filter } : {};
-    dispatch(fetchTickets(filters));
+    // Fetch ALL tickets once (we'll filter on frontend for instant switching)
+    dispatch(fetchTickets({}));
     fetchAdminUsers();
     
     // Auto-refresh every 5 seconds
     const interval = setInterval(() => {
-      const filters = filter !== 'all' ? { status: filter } : {};
-      dispatch(fetchTickets(filters));
+      dispatch(fetchTickets({}));
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [dispatch, filter]);
+  }, [dispatch]); // Remove filter dependency - filtering happens in component
 
   const fetchAdminUsers = async () => {
     try {
@@ -121,7 +121,26 @@ const AdminDashboard = () => {
     return ticket.status === filter;
   });
 
-  if (loading) return <div className="flex justify-center items-center h-64">Loading...</div>;
+  // Calculate counts (these are instant - no API call needed)
+  const allCount = tickets.length;
+  const openCount = tickets.filter(t => t.status === 'open').length;
+  const closedCount = tickets.filter(t => t.status === 'closed').length;
+  const overdueCount = tickets.filter(t => t.slaStatus === 'overdue').length;
+
+  // Show skeleton only on initial load
+  if (loading && tickets.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto py-6 px-4">
+        <div className="h-9 bg-gray-200 rounded w-64 mb-6 animate-pulse"></div>
+        <div className="flex space-x-8 mb-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-10 bg-gray-200 rounded w-24 animate-pulse"></div>
+          ))}
+        </div>
+        <SkeletonLoader type="table" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4">
@@ -165,33 +184,31 @@ const AdminDashboard = () => {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <div className="text-sm text-gray-600">Total Tickets: {tickets.length}</div>
+        <div className="text-sm text-gray-600">Total Tickets: {allCount}</div>
       </div>
 
       <div className="mb-6">
         <nav className="flex space-x-8">
           {[
-            { key: 'all', label: 'All Tickets' },
-            { key: 'open', label: 'Open' },
-            { key: 'closed', label: 'Closed' },
-            { key: 'overdue', label: 'Overdue' }
+            { key: 'all', label: 'All Tickets', count: allCount },
+            { key: 'open', label: 'Open', count: openCount },
+            { key: 'closed', label: 'Closed', count: closedCount },
+            { key: 'overdue', label: 'Overdue', count: overdueCount }
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === tab.key
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-all ${filter === tab.key
                 ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               {tab.label}
-              <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                {tab.key === 'all'
-                  ? tickets.length
-                  : tab.key === 'overdue'
-                    ? tickets.filter(t => t.slaStatus === 'overdue').length
-                    : tickets.filter(t => t.status === tab.key).length
-                }
+              <span className={`ml-2 py-0.5 px-2.5 rounded-full text-xs transition-colors ${filter === tab.key
+                ? 'bg-blue-100 text-blue-900'
+                : 'bg-gray-100 text-gray-900'
+                }`}>
+                {tab.count}
               </span>
             </button>
           ))}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const CannedResponses = () => {
   const [responses, setResponses] = useState([]);
@@ -9,24 +10,27 @@ const CannedResponses = () => {
   const [formData, setFormData] = useState({ title: '', content: '' });
 
   useEffect(() => {
-    fetchResponses();
+    fetchResponses(false); // Initial load with loading state
     
-    // Auto-refresh every 5 seconds
+    // Auto-refresh every 5 seconds (silent updates)
     const interval = setInterval(() => {
-      fetchResponses();
+      fetchResponses(true); // Silent refresh
     }, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const fetchResponses = async () => {
+  const fetchResponses = async (silent = false) => {
     try {
+      if (!silent && responses.length === 0) setLoading(true);
       const response = await api.get('/canned-responses');
       setResponses(response.data.responses);
-      setLoading(false);
+      if (!silent) setLoading(false);
     } catch (error) {
-      setLoading(false);
-      alert('Failed to load canned responses. Please refresh the page.');
+      if (!silent) {
+        setLoading(false);
+        alert('Failed to load canned responses. Please refresh the page.');
+      }
     }
   };
 
@@ -69,7 +73,18 @@ const CannedResponses = () => {
     setFormData({ title: '', content: '' });
   };
 
-  if (loading) return <div className="flex justify-center items-center h-64">Loading...</div>;
+  // Show skeleton only on initial load
+  if (loading && responses.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto py-6 px-4">
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-9 bg-gray-200 rounded w-64 animate-pulse"></div>
+          <div className="h-10 bg-gray-200 rounded w-48 animate-pulse"></div>
+        </div>
+        <SkeletonLoader type="table" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4">

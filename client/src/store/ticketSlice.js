@@ -45,23 +45,51 @@ const ticketSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Fetch Tickets
+      .addCase(fetchTickets.pending, (state) => {
+        // Only set loading if we don't have tickets yet
+        if (state.tickets.length === 0) {
+          state.loading = true;
+        }
+      })
       .addCase(fetchTickets.fulfilled, (state, action) => {
         state.tickets = action.payload;
         state.loading = false;
       })
+      .addCase(fetchTickets.rejected, (state) => {
+        state.loading = false;
+      })
+      // Fetch Single Ticket
+      .addCase(fetchTicketById.pending, (state) => {
+        // Only set loading if we don't have the ticket yet
+        if (!state.currentTicket) {
+          state.loading = true;
+        }
+      })
       .addCase(fetchTicketById.fulfilled, (state, action) => {
         state.currentTicket = action.payload;
+        state.loading = false;
       })
+      .addCase(fetchTicketById.rejected, (state) => {
+        state.loading = false;
+      })
+      // Create Ticket
       .addCase(createTicket.fulfilled, (state, action) => {
         state.tickets.unshift(action.payload);
       })
+      // Update Ticket
       .addCase(updateTicket.fulfilled, (state, action) => {
         const index = state.tickets.findIndex(t => t.id === action.payload.id);
         if (index !== -1) state.tickets[index] = action.payload;
+        if (state.currentTicket?.id === action.payload.id) {
+          state.currentTicket = action.payload;
+        }
       })
+      // Delete Ticket
       .addCase(deleteTicket.fulfilled, (state, action) => {
         state.tickets = state.tickets.filter(t => t.id !== action.payload);
       })
+      // Add Comment
       .addCase(addComment.fulfilled, (state, action) => {
         if (state.currentTicket) {
           state.currentTicket.comments.unshift(action.payload);
