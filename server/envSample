@@ -1,5 +1,11 @@
+# Pooled connection (for your app runtime)
 DATABASE_URL=""
+
+# Direct connection (for Prisma migrations) - notice the -pooler removed
+DIRECT_URL=""
+
 JWT_SECRET=""
 ADMIN_SECRET_CODE=""
-PORT=
+
+PORT=5001
 NODE_ENV=development
